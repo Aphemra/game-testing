@@ -1,0 +1,25 @@
+{
+	"items": [
+		{
+			"itemId": 1,
+			"name": "Apple",
+			"description": "Shiny and red!",
+			"type": "food",
+			"stats": { "health regeneration": 10 }
+		},
+		{
+			"itemId": 2,
+			"name": "Sword",
+			"description": "Don't cut yourself!",
+			"type": "weapon",
+			"stats": { "damage": 2 }
+		},
+		{
+			"itemId": 3,
+			"name": "Helm",
+			"description": "It protects the head!",
+			"type": "armor",
+			"stats": { "armor": 5 }
+		}
+	]
+}
