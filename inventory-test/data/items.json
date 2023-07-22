@@ -5,6 +5,7 @@
 			"name": "Apple",
 			"description": "Shiny and red!",
 			"type": "food",
+			"maxCount": 10,
 			"stats": { "health regeneration": 10 }
 		},
 		{
@@ -12,6 +13,7 @@
 			"name": "Sword",
 			"description": "Don't cut yourself!",
 			"type": "weapon",
+			"maxCount": 1,
 			"stats": { "damage": 2 }
 		},
 		{
@@ -19,6 +21,7 @@
 			"name": "Helm",
 			"description": "It protects the head!",
 			"type": "armor",
+			"maxCount": 1,
 			"stats": { "armor": 5 }
 		}
 	]

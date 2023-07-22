@@ -1,81 +1,15 @@
 import itemData from "../data/items.json" assert { type: "json" };
 import Item from "../objects/Item.js";
+import { globals } from "../globals.js";
 import { initializeTooltips } from "./tooltipManager.js";
 
-const items = [];
-
-// Function to initialize the inventory
-function initializeInventory() {
-	populateItemArray();
-	populateButtons();
-	initializeSlots();
-	initializeTooltips(items);
-}
-
-//#region Drag and Drop Functions
-function dragStart(e) {
-	const item = e.target.closest(".item");
-	if (item) {
-		e.dataTransfer.setData("text/plain", item.parentNode.dataset.itemid);
-	}
-	setTimeout(() => {
-		e.target.classList.add("hide");
-	}, 0);
-}
-
-function dragOver(e) {
-	e.preventDefault();
-	if (e.target.classList.contains("item")) {
-		e.target.parentNode.classList.add("dragover");
-	} else {
-		e.target.classList.add("dragover");
-	}
-}
-
-function dragEnd(e) {
-	if (e.target.classList.contains("hide")) {
-		e.target.classList.remove("hide");
-	}
-}
-
-function dragExit(e) {
-	e.target.classList.remove("dragover");
-}
-
-function drop(e, slots) {
-	e.preventDefault();
-	const draggedItemId = e.dataTransfer.getData("text");
-	const droppedItemId = e.target.closest(".slot").dataset.itemid;
-	if (draggedItemId !== droppedItemId) {
-		if (!droppedItemId) {
-			moveItemToEmptySlot(draggedItemId, e.target.closest(".slot"), slots);
-		} else {
-			swapItems(draggedItemId, droppedItemId);
-		}
-	}
-
-	document.querySelector(`[data-itemid="${draggedItemId}"]`).children[0].classList.remove("hide");
-
-	e.target.classList.remove("dragover");
-	e.target.parentNode.classList.remove("dragover");
-}
-//#endregion
-
-//#region Setup Functions
-function populateItemArray() {
-	const itemsData = itemData.items;
-
-	itemsData.forEach((item) => {
-		let itemObj = new Item(item.itemId, item.name, item.description, item.type, item.stats);
-		items.push(itemObj);
-	});
-}
+//#region Debug Functions - Should Be Deleted Later
 
 function populateButtons() {
 	const buttonContainer = document.querySelector(".buttons");
 	let buttons = [];
 
-	items.forEach((item) => {
+	itemData.items.forEach((item) => {
 		let newButton = document.createElement("button");
 		newButton.id = `${item.name}Button`;
 		newButton.type = "button";
@@ -86,19 +20,211 @@ function populateButtons() {
 
 	buttons.forEach((button, index) => {
 		button.addEventListener("click", () => {
-			let item = items[index];
-
-			if (item.slotId !== null) {
-				items[index].count++;
-				updateItemCount(item);
-				return;
-			}
-
-			item.slotId = Date.now();
+			let item = itemData.items[index];
 			addItemToInventory(item);
 		});
 	});
 }
+
+//#endregion
+
+//#region Inventory Management Functions
+
+function addItemToInventory(itemData) {
+	// Get result of current item that is not max stack size
+	let result = globals.inventory.content.filter((i) => i?.itemId === itemData.itemId && i?.count < i?.maxCount);
+
+	if (result[0]) {
+		// Increase count of first item that is of type but not max count
+		result[0].count++;
+	} else {
+		// Item is not in inventory or is max count, create and add it
+		createAndAddItemToInventory(itemData);
+	}
+
+	console.log("inventory: ", globals.inventory.content);
+	redrawInventory();
+}
+
+function createAndAddItemToInventory(itemData) {
+	// Prevent items being added to full inventory
+	if (globals.inventory.content.length + 1 > globals.inventory.unlockedSlots) return;
+
+	// Create and add item to globals inventory array
+	let newItem = new Item(itemData.itemId, itemData.name, itemData.description, itemData.type, itemData.stats, itemData.maxCount);
+	newItem.slotId = Date.now();
+
+	// Get first empty or undefined slot in the inventory array and place new item there
+	globals.inventory.content[getEmptySlots()[0]] = newItem;
+}
+
+function moveItemsInInventory(start, end) {
+	// Gets the index of the start slot and end slot by slotId
+	// End slot depending on type, which depends on whether it is a swap or an empty slot
+	let startIndex = getItemIndexBySlotId(parseInt(start));
+	let endIndex = typeof end === "string" ? getItemIndexBySlotId(parseInt(end)) : [...getSlotElements()].indexOf(end);
+
+	// Move to the new inventory spot
+	let temp = globals.inventory.content[startIndex];
+	globals.inventory.content[startIndex] = globals.inventory.content[endIndex];
+	globals.inventory.content[endIndex] = temp;
+}
+
+function addItemElement(item, slot) {
+	// If the item doesn't exist or is undefined, reset the slotId and return
+	if (!item) {
+		slot.dataset.slotId = "";
+		return;
+	}
+
+	// Creates a new element, appends it and sets the slotId
+	const newItemElement = item.getElement();
+	addItemEventListeners(newItemElement);
+	slot.appendChild(newItemElement);
+	slot.dataset.slotId = item.slotId;
+}
+
+function redrawInventory() {
+	// Get global inventory
+	const inventoryItems = globals.inventory.content;
+	// Get inventory elements
+	const inventorySlots = [...getSlotElements()];
+
+	// For each non-empty global inventory slot, draw new element for item in slot
+	inventoryItems.forEach((item, index) => {
+		wipeChildren(inventorySlots[index]); // Wipe existing item element
+		addItemElement(item, inventorySlots[index]); // Create and append new item element with updated info
+	});
+}
+
+//#endregion
+
+//#region Helper Functions
+
+function getEmptySlots() {
+	let emptySlots = [];
+
+	// Populate emptySlots array with indexes where inventory array has an empty or undefined value
+	for (let i = 0; i < globals.inventory.unlockedSlots; i++) {
+		if (globals.inventory.content[i] != undefined) {
+		} else {
+			emptySlots.push(i);
+		}
+	}
+	return emptySlots;
+}
+
+function wipeChildren(element) {
+	// Get rid of all the children of the given element
+	while (element.firstChild) {
+		element.removeChild(element.firstChild);
+	}
+}
+
+function deleteItem(element) {
+	// Gets the global inventory index by element slotId, sets it to undefined, and redraws the inventory
+	let index = getItemIndexBySlotId(parseInt(element.parentNode.dataset.slotId));
+	globals.inventory.content[index] = undefined;
+	redrawInventory();
+}
+
+function addItemEventListeners(itemElement) {
+	// Adds all the required event listners to given element
+	itemElement.addEventListener("dragstart", dragStart);
+	itemElement.addEventListener("dragover", dragOver);
+	itemElement.addEventListener("dragend", dragEnd);
+	itemElement.addEventListener("drop", drop);
+	itemElement.addEventListener("click", clickItem);
+	itemElement.addEventListener("mouseover", showDeleteCursor);
+}
+
+function getItemIndexBySlotId(slotId) {
+	return globals.inventory.content.findIndex((item) => item?.slotId === slotId);
+}
+
+function getSlotElements() {
+	return document.querySelectorAll(".slot");
+}
+
+//#endregion
+
+//#region EventListener Functions
+
+function clickItem(e) {
+	// Delete the item when shift clicked
+	if (e.shiftKey) {
+		deleteItem(e.target);
+	}
+}
+
+function showDeleteCursor(e) {
+	if (e.shiftKey) {
+		e.target.classList.add("delete");
+	} else {
+		e.target.classList.remove("delete");
+	}
+}
+
+function dragStart(e) {
+	// Get the closest element with the class "item" from target
+	const nearestItemElement = e.target.closest(".item");
+
+	// If the nearest element exists, pack in the slotId for the dataTransfer on drop
+	if (nearestItemElement) {
+		e.dataTransfer.setData("text/plain", nearestItemElement.parentNode.dataset.slotId);
+	}
+
+	// Some trickery to make the item in the cell that we started the drag disappear
+	setTimeout(() => {
+		e.target.classList.add("hide");
+	}, 0);
+}
+
+function dragOver(e) {
+	e.preventDefault();
+	// Makes sure slot element is being given the dragover class and not the item element
+	if (e.target.classList.contains("item")) {
+		e.target.parentNode.classList.add("dragover");
+	} else {
+		e.target.classList.add("dragover");
+	}
+}
+
+function dragEnd(e) {
+	// Removes the hide class if the element has it, prevents unwanted hidden items
+	if (e.target.classList.contains("hide")) {
+		e.target.classList.remove("hide");
+	}
+}
+
+function dragExit(e) {
+	// Removes dragover from both all targets, prevents dragover from persisting when mouse exits at weird angles
+	e.target.classList.remove("dragover");
+	e.target.parentNode.classList.remove("dragover");
+}
+
+function drop(e) {
+	e.preventDefault();
+	e.stopImmediatePropagation(); // This fixes the drop event being called multiple times and breaking shit
+
+	const startSlotId = e.dataTransfer.getData("text/plain");
+	const endSlotId = e.target.closest(".slot").dataset.slotId;
+
+	if (startSlotId !== endSlotId) {
+		if (!endSlotId) {
+			moveItemsInInventory(startSlotId, e.target.closest(".slot"));
+		} else {
+			moveItemsInInventory(startSlotId, endSlotId);
+		}
+	}
+	e.target.classList.remove("dragover");
+	e.target.parentNode.classList.remove("dragover");
+	redrawInventory();
+}
+
+//#endregion
+
+//#region Initialization Functions
 
 function initializeSlots() {
 	const slots = document.querySelectorAll(".slot");
@@ -107,158 +233,15 @@ function initializeSlots() {
 		slot.addEventListener("dragstart", dragStart);
 		slot.addEventListener("dragover", dragOver);
 		slot.addEventListener("dragleave", dragExit);
-		slot.addEventListener("drop", (event) => drop(event, slots));
-	});
-}
-//#endregion
-
-//#region Inventory Management Functions
-function addItemToInventory(itemData) {
-	const inventory = getInventoryArray();
-	const emptySlotIndex = inventory.findIndex((itemId) => !itemId);
-
-	if (emptySlotIndex === -1) {
-		showWarning("Not enough inventory space!");
-		return;
-	}
-
-	inventory[emptySlotIndex] = itemData.slotId;
-	updateInventoryView(inventory, itemData);
-}
-
-function moveItemToEmptySlot(itemId, targetSlot, slots) {
-	const inventory = getInventoryArray();
-	const sourceIndex = inventory.findIndex((item) => item === parseInt(itemId));
-	const targetIndex = Array.from(targetSlot.parentNode.children).indexOf(targetSlot);
-
-	inventory[targetIndex] = inventory[sourceIndex];
-	inventory[sourceIndex] = "";
-
-	const sourceImg = targetSlot.parentNode.parentNode.querySelector(`[data-itemid="${itemId}"]`).children[0];
-	targetSlot.appendChild(sourceImg);
-
-	targetSlot.dataset.itemid = itemId;
-	slots[sourceIndex].dataset.itemid = "";
-}
-
-function swapItems(itemId1, itemId2) {
-	const inventory = getInventoryArray();
-
-	const index1 = inventory.findIndex((item) => item === parseInt(itemId1));
-	const index2 = inventory.findIndex((item) => item === parseInt(itemId2));
-
-	[inventory[index1], inventory[index2]] = [inventory[index2], inventory[index1]];
-
-	const inventoryTable = document.querySelector(".inventory");
-	const slots = inventoryTable.querySelectorAll(".slot");
-	const item1 = slots[index1].querySelector(".item");
-	const item2 = slots[index2].querySelector(".item");
-	swapItemAttributes(item1, item2);
-
-	[slots[index1].dataset.itemid, slots[index2].dataset.itemid] = [slots[index2].dataset.itemid, slots[index1].dataset.itemid];
-
-	document.querySelector(`[data-itemid="${itemId2}"]`).children[0].classList.remove("hide");
-}
-
-function swapItemAttributes(item1, item2) {
-	let temp1 = item1.cloneNode(true);
-	removeChildren(item1);
-	appendChildren(item1, item2);
-	removeChildren(item2);
-	appendChildren(item2, temp1);
-}
-
-function updateInventoryView(inventory, itemData) {
-	const inventoryTable = document.querySelector(".inventory");
-	const slots = inventoryTable.querySelectorAll(".slot");
-
-	inventory.forEach((itemId, index) => {
-		const slot = slots[index];
-		const itemElement = slot.querySelector(".item");
-
-		if (itemId) {
-			if (!itemElement) {
-				const newItemElement = itemData.getElement();
-				newItemElement.addEventListener("dragstart", dragStart);
-				newItemElement.addEventListener("dragover", dragOver);
-				newItemElement.addEventListener("dragend", dragEnd);
-				newItemElement.addEventListener("drop", drop);
-				newItemElement.addEventListener("click", (event) => clickItem(event, newItemElement));
-				newItemElement.addEventListener("mouseover", (event) => showDeleteCursor(event, newItemElement));
-				slot.appendChild(newItemElement);
-			}
-			slot.dataset.itemid = itemId;
-		} else {
-			slot.dataset.itemid = "";
-			if (itemElement) {
-				slot.removeChild(itemElement);
-			}
-		}
+		slot.addEventListener("drop", drop);
 	});
 }
 
-function updateItemCount(item) {
-	document.querySelector(`[data-itemid="${item.slotId}"]`).children[0].querySelector(".count").innerText = item.count;
+function initializeInventory() {
+	populateButtons();
+	initializeSlots();
 }
 
-function clickItem(e, element) {
-	if (e.shiftKey) {
-		deleteItem(element);
-	}
-}
-
-function deleteItem(element) {
-	const parent = element.parentNode;
-	element.remove();
-	parent.dataset.itemid = "";
-}
-//#endregion
-
-//#region Helper Functions
-function showWarning(warningMessage) {
-	const warning = document.getElementById("warning");
-	warning.innerText = warningMessage;
-
-	warning.style.display = "block";
-	setTimeout(() => {
-		warning.style.display = "none";
-	}, 3500);
-}
-
-function showDeleteCursor(e, element) {
-	if (e.shiftKey) {
-		element.classList.add("delete");
-	} else {
-		element.classList.remove("delete");
-	}
-}
-
-function getInventoryArray() {
-	const slots = document.querySelectorAll(".slot");
-	const inventoryArray = [];
-
-	slots.forEach((slot) => {
-		const itemId = slot.dataset.itemid;
-		inventoryArray.push(itemId ? parseInt(itemId) : "");
-	});
-
-	return inventoryArray;
-}
-
-function removeChildren(parent) {
-	let childCount = parent.children.length;
-	for (let i = 0; i < childCount; i++) {
-		parent.removeChild(parent.firstChild);
-	}
-	console.log(parent);
-}
-
-function appendChildren(receiver, giver) {
-	let childCount = giver.children.length;
-	for (let i = 0; i < childCount; i++) {
-		receiver.appendChild(giver.firstChild);
-	}
-}
 //#endregion
 
 export { initializeInventory };

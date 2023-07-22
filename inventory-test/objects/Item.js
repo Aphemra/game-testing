@@ -1,10 +1,11 @@
 export default class Item {
-	constructor(itemId, name, description, type, stats) {
+	constructor(itemId, name, description, type, stats, maxCount = 1) {
 		this.slotId = null;
 		this.itemId = itemId;
 		this.name = name;
 		this.description = description;
 		this.type = type;
+		this.maxCount = maxCount;
 		this.count = 1;
 		this.stats = stats;
 	}
