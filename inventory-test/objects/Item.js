@@ -1,21 +1,30 @@
 export default class Item {
-	constructor(slotId, itemId, name, description, type, stats) {
-		this.slotId = slotId;
+	constructor(itemId, name, description, type, stats) {
+		this.slotId = null;
 		this.itemId = itemId;
 		this.name = name;
 		this.description = description;
 		this.type = type;
+		this.count = 1;
 		this.stats = stats;
 	}
 
 	getElement() {
-		const element = document.createElement("img");
+		const element = document.createElement("div");
+		const icon = document.createElement("img");
+		const count = document.createElement("div");
 		element.classList.add("item");
 		element.classList.add("tooltipped");
 		element.id = this.itemId;
 		element.setAttribute("draggable", "true");
-		element.setAttribute("title", "");
-		element.setAttribute("src", this.getImageSrc());
+		icon.classList.add("icon");
+		icon.setAttribute("title", "");
+		icon.setAttribute("src", this.getImageSrc());
+		count.classList.add("count");
+		count.innerText = this.count;
+
+		element.appendChild(icon);
+		element.appendChild(count);
 
 		return element;
 	}

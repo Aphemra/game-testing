@@ -66,7 +66,7 @@ function populateItemArray() {
 	const itemsData = itemData.items;
 
 	itemsData.forEach((item) => {
-		let itemObj = new Item(null, item.itemId, item.name, item.description, item.type, item.stats);
+		let itemObj = new Item(item.itemId, item.name, item.description, item.type, item.stats);
 		items.push(itemObj);
 	});
 }
@@ -87,6 +87,13 @@ function populateButtons() {
 	buttons.forEach((button, index) => {
 		button.addEventListener("click", () => {
 			let item = items[index];
+
+			if (item.slotId !== null) {
+				items[index].count++;
+				updateItemCount(item);
+				return;
+			}
+
 			item.slotId = Date.now();
 			addItemToInventory(item);
 		});
@@ -154,17 +161,11 @@ function swapItems(itemId1, itemId2) {
 }
 
 function swapItemAttributes(item1, item2) {
-	const tempSrc = item1.src;
-	const tempId = item1.id;
-	const tempTitle = item1.title;
-
-	item1.src = item2.src;
-	item1.id = item2.id;
-	item1.title = item2.title;
-
-	item2.src = tempSrc;
-	item2.id = tempId;
-	item2.title = tempTitle;
+	let temp1 = item1.cloneNode(true);
+	removeChildren(item1);
+	appendChildren(item1, item2);
+	removeChildren(item2);
+	appendChildren(item2, temp1);
 }
 
 function updateInventoryView(inventory, itemData) {
@@ -194,6 +195,10 @@ function updateInventoryView(inventory, itemData) {
 			}
 		}
 	});
+}
+
+function updateItemCount(item) {
+	document.querySelector(`[data-itemid="${item.slotId}"]`).children[0].querySelector(".count").innerText = item.count;
 }
 
 function clickItem(e, element) {
@@ -238,6 +243,21 @@ function getInventoryArray() {
 	});
 
 	return inventoryArray;
+}
+
+function removeChildren(parent) {
+	let childCount = parent.children.length;
+	for (let i = 0; i < childCount; i++) {
+		parent.removeChild(parent.firstChild);
+	}
+	console.log(parent);
+}
+
+function appendChildren(receiver, giver) {
+	let childCount = giver.children.length;
+	for (let i = 0; i < childCount; i++) {
+		receiver.appendChild(giver.firstChild);
+	}
 }
 //#endregion
 

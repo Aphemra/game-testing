@@ -106,10 +106,29 @@
 	}
 
 	.slot .item {
+		display: flex;
+		position: relative;
+	}
+
+	.icon {
 		width: calc(var(--slot-size) - 1rem);
 		height: calc(var(--slot-size) - 1rem);
 		display: block;
 		margin: 0.5rem auto;
+		pointer-events: none;
+	}
+
+	.count {
+		position: absolute;
+		font-weight: 600;
+		font-size: 0.6rem;
+		color: rgb(0, 255, 242);
+		background-color: rgba(0, 0, 0, 0.45);
+		line-height: 1;
+		padding: 1px;
+		bottom: 15%;
+		right: 15%;
+		pointer-events: none;
 	}
 
 	.dragover {
