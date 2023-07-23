@@ -26,6 +26,31 @@ function populateButtons() {
 	});
 }
 
+function initializeInventorySize() {
+	const columnsInput = document.getElementById("columns");
+	const rowsInput = document.getElementById("rows");
+
+	columnsInput.value = globals.inventory.columns;
+	rowsInput.value = globals.inventory.rows;
+
+	columnsInput.addEventListener("change", () => {
+		setUpInputListeners(columnsInput, rowsInput);
+		redrawInventory();
+	});
+	rowsInput.addEventListener("change", () => {
+		setUpInputListeners(columnsInput, rowsInput);
+		redrawInventory();
+	});
+
+	initializeSlots();
+}
+
+function setUpInputListeners(columns, rows) {
+	globals.inventory.columns = parseInt(columns.value);
+	globals.inventory.rows = parseInt(rows.value);
+	initializeSlots(true);
+}
+
 //#endregion
 
 //#region Inventory Management Functions
@@ -226,9 +251,25 @@ function drop(e) {
 
 //#region Initialization Functions
 
-function initializeSlots() {
-	const slots = document.querySelectorAll(".slot");
+function initializeSlots(resetInventory = false) {
+	const columns = globals.inventory.columns;
+	const rows = globals.inventory.rows;
+	const inventory = document.querySelector(".inventory");
 
+	if (resetInventory) {
+		wipeChildren(inventory);
+	}
+
+	document.documentElement.style.setProperty("--columns", columns);
+
+	for (let i = 0; i < columns * rows; i++) {
+		let slot = document.createElement("div");
+		slot.classList.add("slot");
+		slot.dataset.itemId = "";
+		inventory.appendChild(slot);
+	}
+
+	const slots = document.querySelectorAll(".slot");
 	slots.forEach((slot) => {
 		slot.addEventListener("dragstart", dragStart);
 		slot.addEventListener("dragover", dragOver);
@@ -239,7 +280,7 @@ function initializeSlots() {
 
 function initializeInventory() {
 	populateButtons();
-	initializeSlots();
+	initializeInventorySize();
 }
 
 //#endregion

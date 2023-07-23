@@ -137,39 +137,6 @@
 	}
 }
 
-table {
-	border: 1px solid black;
-	background-color: rgb(48, 18, 0);
-	border-spacing: 0.5rem;
-
-	& td {
-		width: 3rem;
-		height: 3rem;
-		border: 2px solid rgb(108, 60, 40);
-		background-image: url(assets/wood.jpg);
-		background-blend-mode: darken;
-	}
-
-	.slot:hover {
-		background-color: rgba(0, 0, 0, 0.45);
-		-webkit-user-select: none;
-		user-select: none;
-		cursor: pointer;
-	}
-
-	& td > img {
-		width: 2rem;
-		height: 2rem;
-		display: block;
-		margin: 0.2rem auto;
-	}
-
-	.dragover {
-		border: 1px solid rgb(171, 57, 0);
-		outline: 1px solid rgb(171, 57, 0);
-	}
-}
-
 .buttons {
 	display: flex;
 	justify-content: center;
@@ -201,6 +168,22 @@ table {
 
 	& button:active {
 		background-color: darkblue;
+	}
+}
+
+.inventorySize {
+	display: flex;
+	justify-content: space-around;
+	align-items: center;
+	margin: 0.5rem auto;
+	border: 1px solid black;
+	border-radius: 0.25rem;
+	padding: 0.5rem;
+	max-width: 20rem;
+
+	& input[type="number"] {
+		width: 3rem;
+		padding: 0 0.25rem;
 	}
 }
 
